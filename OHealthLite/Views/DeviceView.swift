@@ -118,7 +118,7 @@ struct DeviceView: View {
     }
 
     /// 广播特征判断是否可能是手表（服务 UUID / 名称 / 厂商数据）
-    private func isLikelyWatch(_ d: DiscoveredWatch) -> Bool {
+    private func isLikelyWatch(_ d: WatchBLEManager.DiscoveredWatch) -> Bool {
         let knownUUIDs = [WatchProtocol.servicePrimary, WatchProtocol.serviceSecondary,
                           WatchProtocol.serviceAFAF, WatchProtocol.serviceDiscovery,
                           WatchProtocol.serviceDiscoveryAlt]
