@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 /// 测定设置（心率/血氧自动测定间隔）+ 手动测量，官方 App 同款能力
 struct MeasureSettingsSheet: View {
