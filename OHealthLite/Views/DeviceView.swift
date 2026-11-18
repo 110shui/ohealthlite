@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreBluetooth
 
 /// 设备 Tab —— 对齐官方「设备」页：设备卡 + 手表功能 + 蓝牙调试
 struct DeviceView: View {

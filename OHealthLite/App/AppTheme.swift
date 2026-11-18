@@ -83,18 +83,19 @@ struct ActivityRingsView: View {
 
     var body: some View {
         ZStack {
-            RingTrack(color: Theme.activityRed.opacity(0.15), ratio: 1)
-            RingTrack(color: Theme.activityGreen.opacity(0.15), ratio: 1).scaleEffect(0.78)
-            RingTrack(color: Theme.activityCyan.opacity(0.15), ratio: 1).scaleEffect(0.56)
-            RingArc(color: Theme.activityRed, ratio: min(move, 1))
-            RingArc(color: Theme.activityGreen, ratio: min(exercise, 1)).scaleEffect(0.78)
-            RingArc(color: Theme.activityCyan, ratio: min(stand, 1)).scaleEffect(0.56)
+            RingTrack(color: Theme.activityRed.opacity(0.15), ratio: 1, lineWidth: lineWidth)
+            RingTrack(color: Theme.activityGreen.opacity(0.15), ratio: 1, lineWidth: lineWidth).scaleEffect(0.78)
+            RingTrack(color: Theme.activityCyan.opacity(0.15), ratio: 1, lineWidth: lineWidth).scaleEffect(0.56)
+            RingArc(color: Theme.activityRed, ratio: min(move, 1), lineWidth: lineWidth)
+            RingArc(color: Theme.activityGreen, ratio: min(exercise, 1), lineWidth: lineWidth).scaleEffect(0.78)
+            RingArc(color: Theme.activityCyan, ratio: min(stand, 1), lineWidth: lineWidth).scaleEffect(0.56)
         }
     }
 
     struct RingTrack: View {
         let color: Color
         let ratio: CGFloat
+        var lineWidth: CGFloat = 14
         var body: some View {
             Circle()
                 .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
@@ -103,10 +104,11 @@ struct ActivityRingsView: View {
     struct RingArc: View {
         let color: Color
         let ratio: Double
+        var lineWidth: CGFloat = 14
         var body: some View {
             Circle()
                 .trim(from: 0, to: ratio)
-                .stroke(color, style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
         }
     }
