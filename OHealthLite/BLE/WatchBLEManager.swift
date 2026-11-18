@@ -45,6 +45,8 @@ final class WatchBLEManager: NSObject, ObservableObject {
     private(set) var notifyCharacteristic: CBCharacteristic?
     private(set) var writeCharacteristic: CBCharacteristic?
 
+    static let shared = WatchBLEManager()
+
     override init() {
         super.init()
         central = CBCentralManager(delegate: self, queue: nil)
