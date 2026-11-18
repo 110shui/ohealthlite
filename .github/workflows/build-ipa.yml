@@ -52,3 +52,5 @@ jobs:
           name: OHealthLite-ipa
           path: OHealthLite-unsigned.ipa
           retention-days: 30
+
+  # trigger rebuild
