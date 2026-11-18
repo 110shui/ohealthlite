@@ -8,6 +8,21 @@
 
 ## 构建
 
+### 方式一：GitHub Actions 云构建（无需 Mac）
+
+仓库已配置 `.github/workflows/build-ipa.yml`：推送到 GitHub 后自动在 macOS runner 上编译并产出 **未签名 ipa**（Actions → Artifacts 下载 `OHealthLite-ipa`）。
+
+```bash
+# 在 GitHub 创建空仓库后：
+cd OHealthLite
+git remote add origin https://github.com/<你的用户名>/ohealthlite.git
+git push -u origin main
+```
+
+未签名 ipa 装机：用 [Sideloadly](https://sideloadly.io) / AltStore / Signum + 免费 Apple ID 重签后安装。
+
+### 方式二：本地 Mac 构建
+
 1. 在 Mac 上安装 [XcodeGen](https://github.com/yonaskolb/XcodeGen)（`brew install xcodegen`），或手动在 Xcode 中新建项目后拖入 `OHealthLite/` 源码目录。
 2. 使用 XcodeGen：
 
