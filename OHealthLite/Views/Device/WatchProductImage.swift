@@ -15,12 +15,12 @@ struct WatchProductImage: View {
             // 表壳（钛灰）
             Circle()
                 .fill(RadialGradient(colors: [Color(hex: 0x9EA3A8), Color(hex: 0x5B6066)],
-                                     center: .topLeading, start: 0.2, end: 1.1))
+                                     center: .topLeading, startRadius: 2, endRadius: size * 0.62))
                 .frame(width: size * 0.62, height: size * 0.62)
             // 表圈（深色渐变）
             Circle()
                 .fill(RadialGradient(colors: [Color(hex: 0x2E3236), Color(hex: 0x111417)],
-                                     center: .center, start: 0.5, end: 1.0))
+                                     center: .center, startRadius: 4, endRadius: size * 0.545))
                 .frame(width: size * 0.545, height: size * 0.545)
                 .overlay(Circle().stroke(Color(hex: 0x3A3F44), lineWidth: size * 0.008))
             // 表盘
