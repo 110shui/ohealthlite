@@ -98,7 +98,7 @@ final class HealthStore: ObservableObject {
         // 24h 心率采样
         heartRateSamples = (0..<96).map { i in
             let hour = Double(i) / 4.0
-            let base = hour < 7 ? 58 : hour < 9 ? 82 : hour < 12 ? 74 : hour < 14 ? 88 : hour < 18 ? 78 : hour < 23 ? 68 : 60
+            let base: Double = hour < 7 ? 58 : hour < 9 ? 82 : hour < 12 ? 74 : hour < 14 ? 88 : hour < 18 ? 78 : hour < 23 ? 68 : 60
             let noise = Double((i * 37) % 11) - 5
             return Sample(date: calendar.date(byAdding: .hour, value: i / 4 - 24, to: now)!, value: max(45, base + noise))
         }
