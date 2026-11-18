@@ -5,6 +5,7 @@ struct MeView: View {
     @AppStorage("nickname") private var nickname = "OPPO 用户"
     @AppStorage("goalSteps") private var goalSteps = 8000
     @AppStorage("goalCalories") private var goalCalories = 400
+    @State private var bridgeConnected = false
 
     var body: some View {
         NavigationStack {
@@ -19,6 +20,8 @@ struct MeView: View {
             }
             .background(Theme.pageBG)
             .navigationTitle("我的")
+            .onAppear { bridgeConnected = WatchBridgeClient.shared.isConnected }
+            .onReceive(WatchBridgeClient.shared.$isConnected) { bridgeConnected = $0 }
         }
     }
 
@@ -27,11 +30,12 @@ struct MeView: View {
             HStack(spacing: 14) {
                 Image(systemName: "person.crop.circle.fill")
                     .font(.system(size: 56))
-                    .foregroundColor(Theme.accentCyan)
+                    .foregroundColor(bridgeConnected ? .green : Theme.accentCyan)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(nickname).font(.oppo(20, weight: .bold))
-                    Text("本地模式 · 数据保存在本机")
-                        .font(.oppo(12)).foregroundColor(.secondary)
+                    Text(bridgeConnected ? "手表已联动 · 记录实时同步" : "本地模式 · 连接手表后同步数据")
+                        .font(.oppo(12))
+                        .foregroundColor(bridgeConnected ? .green : .secondary)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")

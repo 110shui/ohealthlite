@@ -106,6 +106,8 @@ final class HealthStore: ObservableObject {
     var workoutsProgress: Double { Double(workouts) / Double(max(workoutsGoal, 1)) }
 
     // MARK: - 桥数据接入
+    private var lastExerciseMinute = -1
+
     /// 由 WatchBridgeClient 推送的真实手表数据
     func applyBridgeSample(_ s: WatchBridgeClient.Sample) {
         let changedHR = s.hr > 0
@@ -114,10 +116,17 @@ final class HealthStore: ObservableObject {
             restingHeartRate = restingHeartRate == 0 ? s.hr : min(restingHeartRate, s.hr)
             heartRateSamples.append(Sample(date: Date(), value: Double(s.hr)))
             if heartRateSamples.count > 288 { heartRateSamples.removeFirst(heartRateSamples.count - 288) }
+            // 锻炼时长估算：心率 >100 次/分视为锻炼中（每自然分钟计 1）
+            let minute = Calendar.current.component(.minute, from: Date())
+            if s.hr > 100, minute != lastExerciseMinute {
+                exerciseMinutes += 1
+                lastExerciseMinute = minute
+            }
         }
         if s.steps > 0 {
             steps = max(steps, s.steps)
             calories = max(calories, steps / 25)   // 粗略换算，后续由手表侧健康服务提供
+            if exerciseMinutes >= 10 { workouts = max(workouts, 1) }
         }
         if let pct = s.spo2, pct > 0 {
             // 桥端合成的血氧百分比（0-100）

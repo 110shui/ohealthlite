@@ -15,6 +15,13 @@ struct OHealthLiteApp: App {
         WatchBridgeClient.shared.onMeasure = { HealthStore.shared.applyMeasureResult($0) }
         // 手表遥控命令 → 短视频翻页（系统音量键模拟）
         WatchBridgeClient.shared.onRemoteCommand = { RemoteControlManager.shared.handle($0) }
+        // 启动自动重连上次的手表桥地址
+        let savedHost = UserDefaults.standard.string(forKey: "bridgeHost") ?? "192.168.2.93"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            if WatchBridgeClient.shared.isConnected == false {
+                WatchBridgeClient.shared.connect(to: savedHost)
+            }
+        }
     }
 
     var body: some Scene {
