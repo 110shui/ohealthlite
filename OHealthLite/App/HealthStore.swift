@@ -26,6 +26,8 @@ final class HealthStore: ObservableObject {
     @Published var systolic: Int = 0
     @Published var diastolic: Int = 0
     @Published var bloodSugar: Double = 0
+    /// 手表佩戴状态（桥 type 34 传感器），nil=未知
+    @Published var watchWorn: Bool?
 
     // 睡眠
     @Published var sleepMinutes: Int = 0
@@ -106,8 +108,8 @@ final class HealthStore: ObservableObject {
             bloodOxygenSamples.append(Sample(date: Date(), value: Double(raw)))
             if bloodOxygenSamples.count > 96 { bloodOxygenSamples.removeFirst(bloodOxygenSamples.count - 96) }
         }
-        if s.hrAgeMs != nil, s.hrAgeMs! >= 0 {
-            // 有心率数据 → 记为一次活动证据（粗略）
+        if let worn = s.worn {
+            watchWorn = worn == 1
         }
     }
 }

@@ -19,6 +19,7 @@ final class WatchBridgeClient: ObservableObject {
         let hr: Int
         let steps: Int
         let spo2Raw: Int?
+        let worn: Int?
         let hrAgeMs: Int?
         let clients: Int?
         let ts: String?
