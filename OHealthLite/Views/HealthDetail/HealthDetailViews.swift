@@ -19,17 +19,29 @@ struct HeartRateDetailView: View {
                 Card {
                     VStack(alignment: .leading, spacing: 12) {
                         CardHeader(icon: "heart.fill", iconColor: Theme.heartRed, title: "心率", trailing: "次/分")
-                        Text("\(store.heartRate)")
+                        Text("\(store.heartRate > 0 ? String(store.heartRate) : "--")")
                             .font(.oppo(44, weight: .bold))
-                        Chart(store.heartRateSamples) {
-                            LineMark(x: .value("t", $0.date), y: .value("bpm", $0.value))
-                                .foregroundStyle(Theme.heartRed)
-                                .interpolationMethod(.catmullRom)
-                            AreaMark(x: .value("t", $0.date), y: .value("bpm", $0.value))
-                                .foregroundStyle(.linearGradient(colors: [Theme.heartRed.opacity(0.25), .clear], startPoint: .top, endPoint: .bottom))
-                                .interpolationMethod(.catmullRom)
+                        if store.heartRateSamples.isEmpty {
+                            VStack(spacing: 8) {
+                                Image(systemName: "heart.slash")
+                                    .font(.system(size: 36))
+                                    .foregroundColor(.secondary)
+                                Text("暂无数据，连接手表后自动同步")
+                                    .font(.oppo(14)).foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 220)
+                        } else {
+                            Chart(store.heartRateSamples) {
+                                LineMark(x: .value("t", $0.date), y: .value("bpm", $0.value))
+                                    .foregroundStyle(Theme.heartRed)
+                                    .interpolationMethod(.catmullRom)
+                                AreaMark(x: .value("t", $0.date), y: .value("bpm", $0.value))
+                                    .foregroundStyle(.linearGradient(colors: [Theme.heartRed.opacity(0.25), .clear], startPoint: .top, endPoint: .bottom))
+                                    .interpolationMethod(.catmullRom)
+                            }
+                            .frame(height: 220)
                         }
-                        .frame(height: 220)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -249,7 +261,7 @@ struct BloodPressureDetailView: View {
     }
 }
 
-// MARK: - 活动详情
+// MARK: - 活动详情（官方：步数/消耗/锻炼时长/活动次数 四环）
 struct ActivityDetailView: View {
     @EnvironmentObject var store: HealthStore
 
@@ -258,11 +270,13 @@ struct ActivityDetailView: View {
             VStack(spacing: 12) {
                 Card {
                     VStack(spacing: 18) {
-                        ActivityRingsView(move: store.stepProgress, exercise: store.exerciseProgress, stand: store.standProgress)
-                            .frame(width: 160, height: 160)
-                        RingStat(color: Theme.activityRed, label: "步数", value: "\(store.steps)", goal: "目标 \(store.stepGoal)")
-                        RingStat(color: Theme.activityGreen, label: "活动消耗", value: "\(store.calories) 千卡", goal: "目标 400 千卡")
-                        RingStat(color: Theme.activityCyan, label: "站立", value: "\(store.standHours) 小时", goal: "目标 12 小时")
+                        QuadrupleRingsView(r1: store.stepProgress, r2: store.calorieProgress,
+                                           r3: store.exerciseProgress, r4: store.workoutsProgress)
+                            .frame(width: 140, height: 140)
+                        activityStat("步数", "\(store.steps)", "\(store.stepGoal) 步")
+                        activityStat("消耗", "\(store.calories)", "\(store.calorieGoal) 千卡")
+                        activityStat("锻炼时长", "\(store.exerciseMinutes)", "\(store.exerciseGoal) 分钟")
+                        activityStat("活动次数", "\(store.workouts)", "\(store.workoutsGoal) 次")
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -273,5 +287,14 @@ struct ActivityDetailView: View {
         .background(Theme.pageBG)
         .navigationTitle("活动")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func activityStat(_ name: String, _ value: String, _ goal: String) -> some View {
+        HStack {
+            Text(name).font(.oppo(14)).foregroundColor(.secondary)
+            Spacer()
+            Text(value).font(.oppo(16, weight: .semibold))
+            Text("/ \(goal)").font(.oppo(13)).foregroundColor(.secondary)
+        }
     }
 }

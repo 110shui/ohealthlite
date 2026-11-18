@@ -11,13 +11,13 @@ struct OHealthLiteApp: App {
                 HomeView()
                     .tabItem { Label("健康", systemImage: "heart.fill") }
                 SportView()
-                    .tabItem { Label("运动", systemImage: "figure.run") }
+                    .tabItem { Label("运动", systemImage: "shoe") }
                 DeviceView()
                     .tabItem { Label("设备", systemImage: "applewatch") }
                 MeView()
                     .tabItem { Label("我的", systemImage: "person.crop.circle") }
             }
-            .tint(Theme.accentCyan)
+            .tint(.primary)
             .environmentObject(store)
             .environmentObject(ble)
         }
