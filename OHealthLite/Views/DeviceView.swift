@@ -5,11 +5,14 @@ import CoreBluetooth
 struct DeviceView: View {
     @EnvironmentObject var ble: WatchBLEManager
     @EnvironmentObject var store: HealthStore
+    @StateObject private var bridge = WatchBridgeClient.shared
+    @AppStorage("bridgeHost") private var bridgeHost = "192.168.2.93"
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 12) {
+                    bridgeCard
                     deviceCard
                     scanResult
                     featureList
@@ -19,6 +22,56 @@ struct DeviceView: View {
             }
             .background(Theme.pageBG)
             .navigationTitle("设备")
+        }
+    }
+
+    // MARK: 手表数据桥（WiFi 直连，绕过蓝牙认证）
+    private var bridgeCard: some View {
+        Card {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 6) {
+                    Image(systemName: "wifi")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(bridge.isConnected ? .green : Theme.accentCyan)
+                    Text("手表数据桥（WiFi）").font(.oppo(15, weight: .semibold))
+                    Spacer()
+                    if bridge.isConnected {
+                        Circle().fill(.green).frame(width: 8, height: 8)
+                    }
+                }
+                HStack(spacing: 8) {
+                    TextField("手表 IP（如 192.168.2.93）", text: $bridgeHost)
+                        .keyboardType(.decimalPad)
+                        .font(.system(.footnote, design: .monospaced))
+                        .padding(10)
+                        .background(Color(hex: 0xF2F2F7))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .disabled(bridge.isConnected)
+                    Button {
+                        if bridge.isConnected {
+                            bridge.disconnect()
+                        } else {
+                            bridge.connect(to: bridgeHost)
+                        }
+                    } label: {
+                        Text(bridge.isConnected ? "断开" : "连接")
+                            .font(.oppo(13, weight: .medium))
+                            .frame(width: 64)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(bridge.isConnected ? .red : Theme.accentCyan)
+                }
+                Text(bridge.stateText)
+                    .font(.oppo(12)).foregroundColor(.secondary)
+                if !bridge.lastPayload.isEmpty {
+                    Text("最新数据：\(bridge.lastPayload)")
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                Text("需手表端安装数据桥 APK 并与手机同 WiFi。桥为按需采样：连接时每 30 秒采一次，未连接每 5 分钟巡检一次。")
+                    .font(.oppo(11)).foregroundColor(.secondary)
+            }
         }
     }
 

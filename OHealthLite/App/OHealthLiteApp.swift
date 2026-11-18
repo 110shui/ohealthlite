@@ -4,6 +4,12 @@ import SwiftUI
 struct OHealthLiteApp: App {
     @StateObject private var store = HealthStore.shared
     @StateObject private var ble = WatchBLEManager.shared
+    @StateObject private var bridge = WatchBridgeClient.shared
+
+    init() {
+        // 桥数据 → 健康中枢
+        WatchBridgeClient.shared.onSample = { HealthStore.shared.applyBridgeSample($0) }
+    }
 
     var body: some Scene {
         WindowGroup {

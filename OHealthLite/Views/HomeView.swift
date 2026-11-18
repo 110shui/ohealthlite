@@ -6,6 +6,7 @@ import Charts
 struct HomeView: View {
     @EnvironmentObject var store: HealthStore
     @EnvironmentObject var ble: WatchBLEManager
+    @StateObject private var bridge = WatchBridgeClient.shared
     @State private var cloudCardDismissed = false
 
     var body: some View {
@@ -13,6 +14,7 @@ struct HomeView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     if !cloudCardDismissed { cloudCard }
+                    bridgeBanner
                     activityCard
                     HStack(spacing: 12) { trendCard; aiCard }
                     metricGrid
@@ -25,6 +27,21 @@ struct HomeView: View {
             .background(Theme.pageBG)
             .navigationTitle("健康")
             .navigationBarTitleDisplayMode(.large)
+        }
+    }
+
+    // MARK: - 桥连接横幅
+    @ViewBuilder private var bridgeBanner: some View {
+        if bridge.isConnected {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                Text("手表数据桥已连接 · 心率 \(store.heartRate > 0 ? "\(store.heartRate) 次/分" : "采样中")")
+                Spacer()
+            }
+            .font(.oppo(13))
+            .padding(12)
+            .background(Color.green.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }
 

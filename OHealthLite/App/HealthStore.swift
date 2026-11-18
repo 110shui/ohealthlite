@@ -2,8 +2,8 @@ import Foundation
 import Combine
 
 /// 健康数据中枢。
-/// 阶段1：本地模拟数据（对齐官方指标口径）。
-/// 阶段2：接入手表 BLE 协议后由 WatchBLEManager 填充真实数据。
+/// 数据源：手表数据桥（WiFi TCP 9999，桥 APK 按需采样推送 JSON）；
+/// 蓝牙通道（WatchBLEManager）保留为后续 OLink 协议逆向的接入点。
 final class HealthStore: ObservableObject {
     static let shared = HealthStore()
 
@@ -85,4 +85,29 @@ final class HealthStore: ObservableObject {
     var exerciseProgress: Double { Double(exerciseMinutes) / Double(max(exerciseGoal, 1)) }
     var calorieProgress: Double { Double(calories) / Double(max(calorieGoal, 1)) }
     var workoutsProgress: Double { Double(workouts) / Double(max(workoutsGoal, 1)) }
+
+    // MARK: - 桥数据接入
+    /// 由 WatchBridgeClient 推送的真实手表数据
+    func applyBridgeSample(_ s: WatchBridgeClient.Sample) {
+        let changedHR = s.hr > 0
+        if changedHR {
+            heartRate = s.hr
+            restingHeartRate = restingHeartRate == 0 ? s.hr : min(restingHeartRate, s.hr)
+            heartRateSamples.append(Sample(date: Date(), value: Double(s.hr)))
+            if heartRateSamples.count > 288 { heartRateSamples.removeFirst(heartRateSamples.count - 288) }
+        }
+        if s.steps > 0 {
+            steps = max(steps, s.steps)
+            calories = max(calories, steps / 25)   // 粗略换算，后续由手表侧健康服务提供
+        }
+        if let raw = s.spo2Raw, raw > 0, raw < 100000 {
+            // 合成的 spo2 值（0-100）才采用；>100000 是未佩戴的 PPG 噪声
+            bloodOxygen = raw
+            bloodOxygenSamples.append(Sample(date: Date(), value: Double(raw)))
+            if bloodOxygenSamples.count > 96 { bloodOxygenSamples.removeFirst(bloodOxygenSamples.count - 96) }
+        }
+        if s.hrAgeMs != nil, s.hrAgeMs! >= 0 {
+            // 有心率数据 → 记为一次活动证据（粗略）
+        }
+    }
 }
