@@ -23,7 +23,7 @@ jobs:
 
       - name: Build (unsigned, device)
         run: |
-          xcodebuild \
+          set -o pipefail && xcodebuild \
             -project OHealthLite.xcodeproj \
             -scheme OHealthLite \
             -configuration Release \

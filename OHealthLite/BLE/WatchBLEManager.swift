@@ -252,18 +252,16 @@ extension WatchBLEManager: CBPeripheralDelegate {
                 id: svc.uuid.uuidString,
                 uuid: svc.uuid,
                 characteristics: (svc.characteristics ?? []).map { ch in
-                    GATTCharacteristicSnapshot(
+                    var a: [String] = []
+                    if ch.properties.contains(.read) { a.append("read") }
+                    if ch.properties.contains(.write) { a.append("write") }
+                    if ch.properties.contains(.writeWithoutResponse) { a.append("writeNR") }
+                    if ch.properties.contains(.notify) { a.append("notify") }
+                    if ch.properties.contains(.indicate) { a.append("indicate") }
+                    return GATTCharacteristicSnapshot(
                         id: ch.uuid.uuidString,
                         uuid: ch.uuid,
-                        properties: ch.properties.map { props in
-                            var a: [String] = []
-                            if props.contains(.read) { a.append("read") }
-                            if props.contains(.write) { a.append("write") }
-                            if props.contains(.writeWithoutResponse) { a.append("writeNR") }
-                            if props.contains(.notify) { a.append("notify") }
-                            if props.contains(.indicate) { a.append("indicate") }
-                            return a
-                        },
+                        properties: a,
                         value: ch.value)
                 })
         }
