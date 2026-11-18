@@ -42,8 +42,12 @@ struct DeviceView: View {
                         .foregroundColor(.red)
                 } else {
                     Text("未连接手表").font(.oppo(18, weight: .bold))
-                    Text("将手表靠近手机，亮屏后自动发现")
-                        .font(.oppo(13)).foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("手表保持亮屏（熄屏时不发广播）", systemImage: "1.circle")
+                        Label("关闭官方 App / 断开其它手机连接", systemImage: "2.circle")
+                        Label("扫不到就打开下面的\"显示全部设备\"", systemImage: "3.circle")
+                    }
+                    .font(.oppo(12)).foregroundColor(.secondary)
                     Button {
                         ble.isScanning ? ble.stopScan() : ble.startScan()
                     } label: {
@@ -57,7 +61,7 @@ struct DeviceView: View {
                     .tint(Theme.accentCyan)
                     .disabled(ble.bluetoothState != .poweredOn)
                     if ble.bluetoothState != .poweredOn {
-                        Text("提示：请在系统设置授权蓝牙，并保持手表亮屏")
+                        Text("提示：请在系统设置授权蓝牙")
                             .font(.oppo(11)).foregroundColor(.orange)
                     }
                 }
@@ -68,19 +72,37 @@ struct DeviceView: View {
 
     // MARK: 扫描结果
     @ViewBuilder private var scanResult: some View {
-        if !ble.discovered.isEmpty {
+        if ble.isScanning || !ble.discoveredAll.isEmpty {
             Card {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("附近的设备").font(.oppo(15, weight: .semibold))
-                    ForEach(ble.discovered) { d in
+                    Toggle("显示全部蓝牙设备（刷机设备可能不匹配过滤规则）", isOn: $ble.showAllDevices)
+                        .font(.oppo(12))
+                        .toggleStyle(.switch)
+                        .controlSize(.mini)
+                    let list = ble.showAllDevices ? ble.discoveredAll : ble.discovered
+                    if list.isEmpty {
+                        Text(ble.isScanning ? "扫描中… 保持手表亮屏" : "未发现设备，点上方\"扫描手表\"")
+                            .font(.oppo(13)).foregroundColor(.secondary)
+                    }
+                    ForEach(list) { d in
                         Button {
                             ble.connect(d)
                         } label: {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(d.name.isEmpty ? "(未命名设备)" : d.name)
-                                        .font(.oppo(15)).foregroundColor(.primary)
-                                    Text("rssi \(d.rssi) · \(d.serviceUUIDs.map { String($0.prefix(8)) }.joined(separator: ", "))")
+                                    HStack(spacing: 6) {
+                                        Text(d.name.isEmpty ? "(无名称)" : d.name)
+                                            .font(.oppo(15)).foregroundColor(.primary)
+                                        if isLikelyWatch(d) {
+                                            Text("手表?")
+                                                .font(.oppo(10, weight: .semibold))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                                .background(Theme.accentCyan)
+                                                .clipShape(Capsule())
+                                        }
+                                    }
+                                    Text("rssi \(d.rssi) · \(d.serviceUUIDs.isEmpty ? "无服务UUID" : d.serviceUUIDs.map { String($0.prefix(8)) }.joined(separator: ", "))")
                                         .font(.oppo(11)).foregroundColor(.secondary)
                                 }
                                 Spacer()
@@ -88,11 +110,23 @@ struct DeviceView: View {
                                     .font(.system(size: 12)).foregroundColor(.secondary)
                             }
                         }
-                        if d.id != ble.discovered.last?.id { Divider() }
+                        if d.id != list.last?.id { Divider() }
                     }
                 }
             }
         }
+    }
+
+    /// 广播特征判断是否可能是手表（服务 UUID / 名称 / 厂商数据）
+    private func isLikelyWatch(_ d: DiscoveredWatch) -> Bool {
+        let knownUUIDs = [WatchProtocol.servicePrimary, WatchProtocol.serviceSecondary,
+                          WatchProtocol.serviceAFAF, WatchProtocol.serviceDiscovery,
+                          WatchProtocol.serviceDiscoveryAlt]
+        if d.serviceUUIDs.contains(where: { knownUUIDs.contains($0) }) { return true }
+        let lower = d.name.lowercased()
+        if lower.contains("oppo") || lower.contains("watch") || lower.contains("xiaomi") { return true }
+        if let m = d.manufacturerData, m.count >= 2, m[0] == 0x06 || m[0] == 0x71 { return true }
+        return false
     }
 
     // MARK: 手表功能开关（对齐官方设备功能列表）

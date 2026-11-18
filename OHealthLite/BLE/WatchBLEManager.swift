@@ -60,24 +60,23 @@ final class WatchBLEManager: NSObject, ObservableObject {
     }
 
     // MARK: - 扫描
+    /// true = 不过滤，列出所有蓝牙设备（刷机设备广播名/厂商数据不匹配官方规则时用）
+    @Published var showAllDevices = false
+    /// 已知手表候选（按广播特征打分）
+    @Published var discoveredAll: [DiscoveredWatch] = []
+
     func startScan() {
         guard central.state == .poweredOn else {
             appendLog("蓝牙未开启，无法扫描")
             return
         }
         discovered.removeAll()
+        discoveredAll.removeAll()
         isScanning = true
-        appendLog("开始扫描…（请保持手表亮屏）")
-        // 先按服务 UUID 精确过滤；后台续扫用于兜底名称匹配
-        central.scanForPeripherals(withServices: WatchProtocol.scanServices,
-                                   options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
-        // 3 秒后切换为全量扫描，兜底手表广播不带服务 UUID 的情况
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-            guard let self, self.isScanning else { return }
-            self.appendLog("切换全量扫描（按名称/厂商数据过滤）")
-            self.central.scanForPeripherals(withServices: nil,
-                                            options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
-        }
+        appendLog("开始扫描…（请保持手表亮屏，且未连接官方 App）")
+        // 全量扫描起步（不过滤），由 UI 层决定展示策略
+        central.scanForPeripherals(withServices: nil,
+                                   options: [CBCentralManagerScanOptionAllowDuplicatesKey: true])
     }
 
     func stopScan() {
@@ -144,24 +143,33 @@ extension WatchBLEManager: CBCentralManagerDelegate {
             ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String)
             ?? ""
 
-        // 过滤规则：带已知服务 UUID，或名称含 OPPO/Watch/OWW，或厂商数据匹配 0x0006 0109
-        var hit = !uuids.isEmpty && uuids.contains(where: { u in
-            WatchProtocol.scanServices.map(\.uuidString).contains(u)
-        })
-        if !hit, name.lowercased().contains("oppo") || name.lowercased().contains("watch") { hit = true }
-        if !hit, let m = mfg, m.count >= 4, m[0] == 0x01, m[1] == 0x09 { hit = true }
-        if !hit { return }
-
         let item = DiscoveredWatch(id: peripheral.identifier.uuidString,
                                    name: name,
                                    rssi: RSSI.intValue,
                                    serviceUUIDs: uuids,
                                    manufacturerData: mfg)
+
+        // 全量记录（供"显示全部设备"模式）
+        if let idx = discoveredAll.firstIndex(where: { $0.id == item.id }) {
+            discoveredAll[idx] = item
+        } else {
+            discoveredAll.append(item)
+        }
+
+        // 过滤规则：带已知服务 UUID，或名称含 oppo/watch/xiaomi/oww，或厂商数据匹配 0x0006 0109 / 0x0171(小米)
+        let lower = name.lowercased()
+        var hit = !uuids.isEmpty && uuids.contains(where: { u in
+            WatchProtocol.scanServices.map(\.uuidString).contains(u)
+        })
+        if !hit, lower.contains("oppo") || lower.contains("watch") || lower.contains("xiaomi") || lower.contains("oww") || lower.contains("mi ") { hit = true }
+        if !hit, let m = mfg, m.count >= 4, m[0] == 0x01, m[1] == 0x09 { hit = true }
+        if !hit { return }
+
         if let idx = discovered.firstIndex(where: { $0.id == item.id }) {
             discovered[idx] = item
         } else {
             discovered.append(item)
-            appendLog("发现设备: \(name) rssi=\(RSSI.intValue) services=\(uuids)")
+            appendLog("发现候选手表: \(name) rssi=\(RSSI.intValue) services=\(uuids)")
         }
     }
 
