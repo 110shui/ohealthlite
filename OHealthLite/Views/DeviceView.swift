@@ -12,8 +12,8 @@ struct DeviceView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 12) {
+                    deviceHeroCard
                     bridgeCard
-                    deviceCard
                     scanResult
                     featureList
                     debugEntry
@@ -22,7 +22,67 @@ struct DeviceView: View {
             }
             .background(Theme.pageBG)
             .navigationTitle("设备")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Image(systemName: "plus")
+                }
+            }
         }
+    }
+
+    // MARK: 官方设备卡：产品图 + 设备名 + 状态 + 提示卡
+    private var deviceHeroCard: some View {
+        VStack(spacing: 14) {
+            WatchProductImage(size: 220)
+                .environmentObject(store)
+            Text("OPPO Watch X3")
+                .font(.oppo(24, weight: .bold))
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(bridge.isConnected || ble.connectedWatch != nil ? Color.green : Color.red)
+                    .frame(width: 8, height: 8)
+                Text(bridge.isConnected ? "数据桥已连接，数据同步中" : (ble.connectedWatch != nil ? "蓝牙已连接" : "该设备当前无法使用"))
+                    .font(.oppo(14, weight: .medium))
+            }
+            // 提示卡（官方样式：图标 + 标题 + 描述 + 主按钮 + 副操作）
+            VStack(spacing: 14) {
+                if bridge.isConnected {
+                    Image(systemName: "checkmark.circle")
+                        .font(.system(size: 44, weight: .light))
+                        .foregroundColor(.green)
+                    Text("数据同步正常").font(.oppo(17, weight: .semibold))
+                    Text("心率与步数将随官方 HealthKit 接入逐步点亮")
+                        .font(.oppo(13)).foregroundColor(.secondary)
+                } else {
+                    Image(systemName: "exclamationmark.circle")
+                        .font(.system(size: 44, weight: .light))
+                        .foregroundColor(.red)
+                    Text("手表未建立数据连接").font(.oppo(17, weight: .semibold))
+                    Text("通过 WiFi 数据桥连接后即可同步健康数据")
+                        .font(.oppo(13)).foregroundColor(.secondary)
+                    Button {
+                        bridge.connect(to: bridgeHost)
+                    } label: {
+                        Text("连接数据桥")
+                            .font(.oppo(16, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .background(Color.black)
+                            .clipShape(Capsule())
+                    }
+                    .padding(.horizontal, 40)
+                    Text("连接前请确认手表已安装数据桥 APK")
+                        .font(.oppo(14))
+                        .foregroundColor(Color(hex: 0x2F6BF6))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
+            .background(Theme.cardBG)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
     }
 
     // MARK: 手表数据桥（WiFi 直连，绕过蓝牙认证）
@@ -72,54 +132,6 @@ struct DeviceView: View {
                 Text("需手表端安装数据桥 APK 并与手机同 WiFi。桥为按需采样：连接时每 30 秒采一次，未连接每 5 分钟巡检一次。")
                     .font(.oppo(11)).foregroundColor(.secondary)
             }
-        }
-    }
-
-    // MARK: 设备卡
-    private var deviceCard: some View {
-        Card {
-            VStack(spacing: 14) {
-                Image(systemName: "applewatch")
-                    .font(.system(size: 52, weight: .light))
-                    .foregroundColor(ble.connectedWatch != nil ? Theme.accentCyan : Color(.systemGray3))
-                if let w = ble.connectedWatch {
-                    Text(w.name.isEmpty ? "OPPO Watch" : w.name)
-                        .font(.oppo(18, weight: .bold))
-                    HStack(spacing: 6) {
-                        Circle().fill(Color.green).frame(width: 8, height: 8)
-                        Text(ble.connectionPhase.rawValue)
-                            .font(.oppo(13)).foregroundColor(.secondary)
-                    }
-                    Button("断开连接") { ble.disconnect() }
-                        .font(.oppo(13))
-                        .foregroundColor(.red)
-                } else {
-                    Text("未连接手表").font(.oppo(18, weight: .bold))
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label("手表保持亮屏（熄屏时不发广播）", systemImage: "1.circle")
-                        Label("关闭官方 App / 断开其它手机连接", systemImage: "2.circle")
-                        Label("扫不到就打开下面的\"显示全部设备\"", systemImage: "3.circle")
-                    }
-                    .font(.oppo(12)).foregroundColor(.secondary)
-                    Button {
-                        ble.isScanning ? ble.stopScan() : ble.startScan()
-                    } label: {
-                        HStack {
-                            if ble.isScanning { ProgressView().controlSize(.small) }
-                            Text(ble.isScanning ? "停止扫描" : "扫描手表")
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.accentCyan)
-                    .disabled(ble.bluetoothState != .poweredOn)
-                    if ble.bluetoothState != .poweredOn {
-                        Text("提示：请在系统设置授权蓝牙")
-                            .font(.oppo(11)).foregroundColor(.orange)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
         }
     }
 
