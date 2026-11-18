@@ -1,0 +1,35 @@
+name: OHealthLite
+options:
+  bundleIdPrefix: com.research.ohealthlite
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  OHealthLite:
+    type: application
+    platform: iOS
+    sources:
+      - OHealthLite
+    info:
+      path: OHealthLite/Info.plist
+      properties:
+        NSBluetoothAlwaysUsageDescription: 连接手表以同步健康数据并测量心电图
+        NSBluetoothPeripheralUsageDescription: 连接手表以同步健康数据
+        UIBackgroundModes:
+          - bluetooth-central
+        UILaunchScreen: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.research.ohealthlite
+        MARKETING_VERSION: 1.0.0
+        CURRENT_PROJECT_VERSION: 1
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: 5.9
+schemes:
+  OHealthLite:
+    build:
+      targets:
+        OHealthLite: all
+    run:
+      config: Debug
+    archive:
+      config: Release

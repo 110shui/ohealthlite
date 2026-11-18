@@ -1,0 +1,54 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'OHealthLite/**'
+      - '.github/workflows/build-ipa.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: OHealthLite
+        run: xcodegen generate
+
+      - name: Build (unsigned, device)
+        working-directory: OHealthLite
+        run: |
+          xcodebuild \
+            -project OHealthLite.xcodeproj \
+            -scheme OHealthLite \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            | xcbeautify || exit 1
+
+      - name: Package IPA
+        run: |
+          APP="OHealthLite/build/Build/Products/Release-iphoneos/OHealthLite.app"
+          test -d "$APP" || { echo "app not found"; exit 1; }
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -r OHealthLite-unsigned.ipa Payload
+          sha256sum OHealthLite-unsigned.ipa
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OHealthLite-ipa
+          path: OHealthLite-unsigned.ipa
+          retention-days: 30
