@@ -47,6 +47,22 @@ final class HealthStore: ObservableObject {
     // 运动记录
     @Published var sportRecords: [SportRecord] = []
 
+    // 血压记录（手动录入 + 手表同步）
+    @Published var bpRecords: [BPRecord] = [] {
+        didSet { persistBP() }
+    }
+
+    struct BPRecord: Identifiable, Codable {
+        let id: String
+        let date: Date
+        let systolic: Int
+        let diastolic: Int
+    }
+
+    // 测定状态（心率/血氧手动测量）
+    @Published var measuring = false
+    @Published var lastMeasureResult = ""
+
     struct Sample: Identifiable {
         let id = UUID()
         let date: Date
@@ -73,6 +89,7 @@ final class HealthStore: ObservableObject {
 
     init() {
         seedDemoData()
+        loadBP()
     }
 
     /// 默认空数据（未连接手表，与官方 App 空态一致）；阶段2由手表同步填充
@@ -102,14 +119,89 @@ final class HealthStore: ObservableObject {
             steps = max(steps, s.steps)
             calories = max(calories, steps / 25)   // 粗略换算，后续由手表侧健康服务提供
         }
-        if let raw = s.spo2Raw, raw > 0, raw < 100000 {
-            // 合成的 spo2 值（0-100）才采用；>100000 是未佩戴的 PPG 噪声
-            bloodOxygen = raw
-            bloodOxygenSamples.append(Sample(date: Date(), value: Double(raw)))
+        if let pct = s.spo2, pct > 0 {
+            // 桥端合成的血氧百分比（0-100）
+            bloodOxygen = pct
+            bloodOxygenSamples.append(Sample(date: Date(), value: Double(pct)))
             if bloodOxygenSamples.count > 96 { bloodOxygenSamples.removeFirst(bloodOxygenSamples.count - 96) }
         }
         if let worn = s.worn {
             watchWorn = worn == 1
+        }
+    }
+
+    // MARK: - 手表端记录同步
+    /// 桥返回的手表记录（RECORDS 响应）：hr/spo2 为 [[tsMs, 值x10]]
+    func applyBridgeRecords(_ r: WatchBridgeClient.RecordsPayload) {
+        let calendar = Calendar.current
+        if let hrList = r.hr, !hrList.isEmpty {
+            // 记录即权威数据源：直接重建 24h 内样本
+            var samples: [Sample] = []
+            for pair in hrList where pair.count >= 2 {
+                let d = Date(timeIntervalSince1970: Double(pair[0]) / 1000)
+                if let days = calendar.dateComponents([.day], from: d, to: Date()).day, days <= 2 {
+                    samples.append(Sample(date: d, value: Double(pair[1]) / 10))
+                }
+            }
+            heartRateSamples = samples.sorted { $0.date < $1.date }
+            if let last = heartRateSamples.last, heartRate == 0 { heartRate = Int(last.value) }
+        }
+        if let spo2List = r.spo2, !spo2List.isEmpty {
+            var samples: [Sample] = []
+            for pair in spo2List where pair.count >= 2 {
+                let d = Date(timeIntervalSince1970: Double(pair[0]) / 1000)
+                if let days = calendar.dateComponents([.day], from: d, to: Date()).day, days <= 2 {
+                    samples.append(Sample(date: d, value: Double(pair[1]) / 10))
+                }
+            }
+            bloodOxygenSamples = samples.sorted { $0.date < $1.date }
+            if let last = bloodOxygenSamples.last, bloodOxygen == 0 { bloodOxygen = Int(last.value) }
+        }
+    }
+
+    /// 手动测量结果（MEASURE 响应）
+    func applyMeasureResult(_ m: WatchBridgeClient.MeasureResult) {
+        measuring = false
+        var parts: [String] = []
+        if let hr = m.hr, hr > 0 {
+            heartRate = hr
+            heartRateSamples.append(Sample(date: Date(), value: Double(hr)))
+            parts.append("心率 \(hr) 次/分")
+        } else {
+            parts.append("心率未测出")
+        }
+        if let spo2 = m.spo2, spo2 > 0 {
+            bloodOxygen = spo2
+            bloodOxygenSamples.append(Sample(date: Date(), value: Double(spo2)))
+            parts.append("血氧 \(spo2)%")
+        }
+        lastMeasureResult = parts.joined(separator: " · ")
+    }
+
+    // MARK: - 血压记录
+    func addBP(systolic sys: Int, diastolic dia: Int) {
+        guard sys > 50, sys < 260, dia > 30, dia < 200 else { return }
+        let rec = BPRecord(id: UUID().uuidString, date: Date(), systolic: sys, diastolic: dia)
+        bpRecords.append(rec)
+        if bpRecords.count > 200 { bpRecords.removeFirst(bpRecords.count - 200) }
+        self.systolic = sys
+        self.diastolic = dia
+    }
+
+    private func persistBP() {
+        if let data = try? JSONEncoder().encode(bpRecords) {
+            UserDefaults.standard.set(data, forKey: "ohealth.bp.records")
+        }
+    }
+
+    private func loadBP() {
+        if let data = UserDefaults.standard.data(forKey: "ohealth.bp.records"),
+           let list = try? JSONDecoder().decode([BPRecord].self, from: data), !list.isEmpty {
+            bpRecords = list
+            if let last = list.last {
+                systolic = last.systolic
+                diastolic = last.diastolic
+            }
         }
     }
 }

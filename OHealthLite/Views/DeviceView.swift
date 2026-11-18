@@ -14,6 +14,7 @@ struct DeviceView: View {
                 VStack(spacing: 12) {
                     deviceHeroCard
                     bridgeCard
+                    RemoteControlCard()
                     scanResult
                     featureList
                     debugEntry

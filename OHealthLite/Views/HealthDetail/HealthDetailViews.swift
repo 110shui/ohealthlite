@@ -47,6 +47,9 @@ struct HeartRateDetailView: View {
                 .padding(.horizontal, 16)
 
                 statRow
+
+                Card { MeasureCard() }
+                    .padding(.horizontal, 16)
             }
             .padding(.vertical, 8)
         }
@@ -186,6 +189,9 @@ struct BloodOxygenDetailView: View {
                     StatCell(title: "状态", value: "正常", unit: "", color: .green)
                 }
                 .padding(.horizontal, 16)
+
+                Card { MeasureCard() }
+                    .padding(.horizontal, 16)
             }
             .padding(.vertical, 8)
         }
@@ -234,7 +240,7 @@ struct StressDetailView: View {
     }
 }
 
-// MARK: - 血压详情
+// MARK: - 血压详情（手动录入 + 记录列表 + 趋势）
 struct BloodPressureDetailView: View {
     @EnvironmentObject var store: HealthStore
 
@@ -245,19 +251,86 @@ struct BloodPressureDetailView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         CardHeader(icon: "scalemass.fill", iconColor: Theme.bpPurple, title: "血压", trailing: "mmHg")
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text("\(store.systolic)/\(store.diastolic)").font(.oppo(44, weight: .bold))
+                            Text("\(store.systolic > 0 ? String(store.systolic) : "--")/\(store.diastolic > 0 ? String(store.diastolic) : "--")")
+                                .font(.oppo(44, weight: .bold))
                         }
                         Text("收缩压/舒张压").font(.oppo(12)).foregroundColor(.secondary)
-                        Text("正常").font(.oppo(14, weight: .semibold)).foregroundColor(.green)
+                        Text(bpLevel(store.systolic, store.diastolic))
+                            .font(.oppo(14, weight: .semibold))
+                            .foregroundColor(bpColor(store.systolic, store.diastolic))
                     }
                 }
                 .padding(.horizontal, 16)
+
+                Card {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("趋势").font(.oppo(15, weight: .semibold))
+                        BPChart(records: store.bpRecords)
+                        HStack(spacing: 16) {
+                            HStack(spacing: 4) {
+                                Circle().fill(Theme.bpPurple).frame(width: 8, height: 8)
+                                Text("收缩压").font(.oppo(12)).foregroundColor(.secondary)
+                            }
+                            HStack(spacing: 4) {
+                                Circle().fill(Theme.accentCyan).frame(width: 8, height: 8)
+                                Text("舒张压").font(.oppo(12)).foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+
+                Card { BloodPressureInputRow() }
+                    .padding(.horizontal, 16)
+
+                if !store.bpRecords.isEmpty {
+                    Card {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("记录").font(.oppo(15, weight: .semibold))
+                            ForEach(Array(store.bpRecords.suffix(10).reversed())) { rec in
+                                HStack {
+                                    Text(dateStr(rec.date))
+                                        .font(.oppo(14)).foregroundColor(.secondary)
+                                    Spacer()
+                                    Text("\(rec.systolic)/\(rec.diastolic)")
+                                        .font(.oppo(16, weight: .semibold))
+                                    Text(bpLevel(rec.systolic, rec.diastolic))
+                                        .font(.oppo(12))
+                                        .foregroundColor(bpColor(rec.systolic, rec.diastolic))
+                                        .frame(width: 44)
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
             }
             .padding(.vertical, 8)
         }
         .background(Theme.pageBG)
         .navigationTitle("血压")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func dateStr(_ d: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "MM-dd HH:mm"
+        return f.string(from: d)
+    }
+
+    private func bpLevel(_ sys: Int, _ dia: Int) -> String {
+        if sys == 0 && dia == 0 { return "--" }
+        if sys < 120 && dia < 80 { return "正常" }
+        if sys < 140 && dia < 90 { return "偏高" }
+        return "偏高"
+    }
+
+    private func bpColor(_ sys: Int, _ dia: Int) -> Color {
+        if sys == 0 && dia == 0 { return .secondary }
+        if sys < 120 && dia < 80 { return .green }
+        if sys < 140 && dia < 90 { return .orange }
+        return Theme.heartRed
     }
 }
 
